@@ -1,29 +1,31 @@
 import requests
-import json
-from config import keys
 
-class ConvertException(Exception):
+class APIException(Exception):
     pass
 
-class CryptoConverter:
+class CurrencyConverter:
     @staticmethod
-    def convert(quote: str, base: str, amount: str):
-    if quote == base:
-        raise ConvertException(f'Невозможно перевести одинаковые валюты {base}.')
-    
-    try:
-        quote_ticker = keys[quote]
-    except KeyError:
-        raise ConvertException(f'Не удалось обработать валюту {quote}')
+    def get_price(base, quote, amount):
+        if base == quote:
+            raise APIException("Нельзя конвертировать одну и ту же валюту.")
 
-    try:
-        base_ticker = keys[base]
-    except KeyError:
-        raise ConvertException(f'Не удалось обработать валюту {base}')    
-    
-    try:
-        amount = float(amount)
-    except ValueError:
+        url = f"https://api.coingate.com/v2/rates/merchant/{base}/{quote}"
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            raise APIException("Ошибка при запросе к API.")
+
+        rate = response.content.decode("utf-8")
+
+        try:
+            rate = float(rate)
+        except ValueError:
+            pass
+
+        if isinstance(rate, float):
+            return float(rate) * float(amount)
+        else:
+            raise APIException("Ошибка при обработке курса.")
         raise ConvertException(f'Не удалось обработать количество {amount}') 
     
     r = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym={quote_ticker}&tsyms={base_ticker}')
